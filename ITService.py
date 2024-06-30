@@ -61,7 +61,8 @@ class ITService:
         return round(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000)
     
     def checkClickOnImg(self, loadImgRes,p):
-        for r in loadImgRes["rects"]:
+        blackRects = list(filter(lambda r: r['status'] == self.STATUS_NOT_VISIBLE, loadImgRes["rects"]))
+        for r in blackRects:
             if self.pointInRectangle(r['rect'],p):
                 r['status'] = self.STATUS_VISIBLE
                 rect = r['rect']
@@ -111,14 +112,11 @@ class ITService:
          
     def blackenPixels(self,rects,img):
         rectsToBlack = list(filter(lambda r: r['status'] == self.STATUS_NOT_VISIBLE, rects))
-        pixels = np.array(img) 
         for r in rectsToBlack:
             rect = r['rect']
             for x in range(rect[0],rect[2]):
                 for y in range(rect[1],rect[3]):
-                    pixels[x][y] = [0,0,0]
-        pixels = (pixels).astype(np.uint8)                  
-        return Image.fromarray(pixels)
+                    img.putpixel((x,y),(0,0,0))
                   
 
     def getNumOfImages(self):
@@ -178,8 +176,7 @@ class ITService:
         rects = self.getRects(squareSide)
         rectChosen = np.random.choice(rects)
         rectChosen['status'] = self.STATUS_VISIBLE
-
-        img = self.blackenPixels(rects,img)
+        self.blackenPixels(rects,img)
           
         res = {"img":img, "imgOriginal":imgO, "rects":rects, "imgSize":minSide, "label":data['label'].lower()}
         return res   
