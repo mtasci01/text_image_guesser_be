@@ -10,6 +10,7 @@ import uuid
 from PIL import Image
 import logging
 from pathlib import Path
+import nltk
 
 import json
 
@@ -27,6 +28,7 @@ class ITService:
     STATUS_VISIBLE = "visible"
     STATUS_NOT_VISIBLE = "not_visible"
     logging.basicConfig(level=logging.INFO)
+    
 
     def __init__(self):
         
@@ -37,6 +39,8 @@ class ITService:
         else:    
             self.mongoclient = pymongo.MongoClient(self.config['mongo_connstr'])
             self.db = self.mongoclient[self.config['mongo_db']]
+        self.stopwords = set(w.rstrip() for w in open('resources/stopwords.txt'))
+        self.punctuation = {",",".",";",":","(",")","→","’","'","”","“","\""}
 
     def read_config(self):
 
@@ -67,6 +71,35 @@ class ITService:
             e["_id"] = None
             e['filename'] = os.path.basename(e["fullFilename"])
         return tList
+    
+    def startGame(self,docId,pChange):
+        pChange = float(pChange)
+        fileDoc = self.db.text_guesser.find_one({'_id': bson.ObjectId(docId)})
+        tokens = nltk.tokenize.word_tokenize(fileDoc["content"])
+        changeCnt = 0
+        ixDict = {}
+        for i in range(len(tokens)):
+            tokenL = tokens[i].lower()
+            if (tokenL in self.stopwords or tokenL in self.punctuation):
+                continue
+            randnum = np.random.rand()
+            if randnum <= pChange:
+                placeholder = "{" + str(changeCnt) + "}"
+                ixDict[str(changeCnt)] = {"i":i, "originalText":tokens[i]} 
+                tokens[i] = placeholder
+                changeCnt = changeCnt + 1
+        text = ' '.join(tokens)
+        text = text.replace(' . ', '. ')
+        text = text.replace(' , ', ', ')
+        text = text.replace(' ; ', '; ')
+        text = text.replace(' : ', ': ')
+        text = text.replace(" ’ ", "’")
+        text = text.replace(" “ ", "“")         
+        doc = {'tokens':tokens,'ixDict':ixDict, "text_id":bson.ObjectId(docId), "text":text}        
+        docIn = self.db.text_guesser_game_cache.insert_one(doc)
+        retDoc = {'game_id':str(docIn.inserted_id),"text":text}
+        return retDoc        
+
     
     def checkClickOnImg(self, loadImgRes,p):
         blackRects = list(filter(lambda r: r['status'] == self.STATUS_NOT_VISIBLE, loadImgRes["rects"]))

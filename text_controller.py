@@ -22,3 +22,7 @@ service = ITService()
 @app.get("/text/get_saved_files")
 def getSavedFiles():
     return service.getSavedTextFiles()
+
+@app.get("/text/start_game")
+def startGame(docId,prob):
+    return service.startGame(docId,prob)
