@@ -69,7 +69,7 @@ class ITService:
         for e in tList:
             e["fileid"] = str(e["_id"]) 
             e["_id"] = None
-            e['filename'] = os.path.basename(e["fullFilename"])
+            #e['filename'] = os.path.basename(e["fullFilename"])
         return tList
     
     def tokenstoTxt(self,tokens):
@@ -101,6 +101,7 @@ class ITService:
         text = self.tokenstoTxt(tokens)
         doc = {'tokens':tokens,'ixDict':ixDict, "text_id":bson.ObjectId(docId), "text":text, "created_at":self.getRightnowUTC()}        
         docIn = self.db.text_guesser_game_cache.insert_one(doc)
+        logging.info("started game with id " + str(docIn.inserted_id)) 
         retDoc = {'game_id':str(docIn.inserted_id),"text":text}
         return retDoc
             
@@ -112,8 +113,23 @@ class ITService:
                 cache_doc['tokens'][ixObj["i"]] = ixObj["originalText"]
         self.db.text_guesser_game_cache.update_one({"_id":bson.ObjectId(game_id)},{ "$set": { 'tokens': cache_doc['tokens'],"updated_at":self.getRightnowUTC() } } ) 
         text = self.tokenstoTxt(cache_doc['tokens'])       
-        return {"text":text}    
-    
+        return {"text":text} 
+
+    def delete_file(self, text_id):
+        self.db.text_guesser.delete_one({'_id': bson.ObjectId(text_id)})
+        logging.info("delete textDoc with id " + str(text_id)) 
+
+    def upload_file(self,file):
+        contents=[]
+        with file.file as f:
+            for line in io.TextIOWrapper(f, encoding='utf-8'):
+                contents.append(line)
+        content = os.linesep.join(contents)        
+        text_doc = {"created_at":self.getRightnowUTC(),"filename":file.filename,"content":content, "scores":[]}
+
+        self.db.text_guesser.insert_one(text_doc)
+        logging.info("created text_doc with id " + str(text_doc["_id"]))       
+        
     def textRevealNumber(self,game_id,ix):
         ix = str(ix)
         cache_doc = self.db.text_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
