@@ -2,9 +2,8 @@ import logging
 import math
 import sys
 import uuid
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget,QLabel,QFrame,QGridLayout,QLineEdit,QMessageBox,QPushButton,QVBoxLayout,QFileDialog
-from PyQt5 import QtCore, QtGui,QtWidgets
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget,QLabel,QFrame,QLineEdit,QMessageBox,QPushButton,QVBoxLayout,QFileDialog
+from PyQt5 import QtCore, QtGui
 
 from ITService import ITService
 logging.basicConfig(level=logging.INFO)

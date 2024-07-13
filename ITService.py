@@ -60,6 +60,14 @@ class ITService:
     def getRightnowUTC(self):
         return round(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000)
     
+    def getSavedTextFiles(self):
+        tList = list(self.db.text_guesser.find({}))
+        for e in tList:
+            e["fileid"] = str(e["_id"]) 
+            e["_id"] = None
+            e['filename'] = os.path.basename(e["fullFilename"])
+        return tList
+    
     def checkClickOnImg(self, loadImgRes,p):
         blackRects = list(filter(lambda r: r['status'] == self.STATUS_NOT_VISIBLE, loadImgRes["rects"]))
         for r in blackRects:
