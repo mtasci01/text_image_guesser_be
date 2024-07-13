@@ -25,4 +25,12 @@ def getSavedFiles():
 
 @app.get("/text/start_game")
 def startGame(docId,prob):
-    return service.startGame(docId,prob)
+    return service.startTxtGame(docId,prob)
+
+@app.get("/text/guess_word")
+def startGame(game_id,word):
+    return service.guessTextWord(game_id,word)
+
+@app.get("/text/reveal_number")
+def startGame(game_id,number):
+    return service.textRevealNumber(game_id,number)

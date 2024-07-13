@@ -72,7 +72,17 @@ class ITService:
             e['filename'] = os.path.basename(e["fullFilename"])
         return tList
     
-    def startGame(self,docId,pChange):
+    def tokenstoTxt(self,tokens):
+        text = ' '.join(tokens)
+        text = text.replace(' . ', '. ')
+        text = text.replace(' , ', ', ')
+        text = text.replace(' ; ', '; ')
+        text = text.replace(' : ', ': ')
+        text = text.replace(" ’ ", "’")
+        text = text.replace(" “ ", "“")
+        return text 
+    
+    def startTxtGame(self,docId,pChange):
         pChange = float(pChange)
         fileDoc = self.db.text_guesser.find_one({'_id': bson.ObjectId(docId)})
         tokens = nltk.tokenize.word_tokenize(fileDoc["content"])
@@ -88,18 +98,33 @@ class ITService:
                 ixDict[str(changeCnt)] = {"i":i, "originalText":tokens[i]} 
                 tokens[i] = placeholder
                 changeCnt = changeCnt + 1
-        text = ' '.join(tokens)
-        text = text.replace(' . ', '. ')
-        text = text.replace(' , ', ', ')
-        text = text.replace(' ; ', '; ')
-        text = text.replace(' : ', ': ')
-        text = text.replace(" ’ ", "’")
-        text = text.replace(" “ ", "“")         
-        doc = {'tokens':tokens,'ixDict':ixDict, "text_id":bson.ObjectId(docId), "text":text}        
+        text = self.tokenstoTxt(tokens)
+        doc = {'tokens':tokens,'ixDict':ixDict, "text_id":bson.ObjectId(docId), "text":text, "created_at":self.getRightnowUTC()}        
         docIn = self.db.text_guesser_game_cache.insert_one(doc)
         retDoc = {'game_id':str(docIn.inserted_id),"text":text}
-        return retDoc        
-
+        return retDoc
+            
+    def guessTextWord(self,game_id,word):
+        cache_doc = self.db.text_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
+        for ix in cache_doc['ixDict']:
+            ixObj = cache_doc['ixDict'][ix]
+            if word.lower() == ixObj["originalText"].lower():
+                cache_doc['tokens'][ixObj["i"]] = ixObj["originalText"]
+        self.db.text_guesser_game_cache.update_one({"_id":bson.ObjectId(game_id)},{ "$set": { 'tokens': cache_doc['tokens'],"updated_at":self.getRightnowUTC() } } ) 
+        text = self.tokenstoTxt(cache_doc['tokens'])       
+        return {"text":text}    
+    
+    def textRevealNumber(self,game_id,ix):
+        ix = str(ix)
+        cache_doc = self.db.text_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
+        if not(ix in cache_doc['ixDict']):
+            text = self.tokenstoTxt(cache_doc['tokens'])    
+            return {"text":text}
+        ixObj = cache_doc['ixDict'][ix]
+        cache_doc['tokens'][ixObj["i"]] = ixObj["originalText"]
+        self.db.text_guesser_game_cache.update_one({"_id":bson.ObjectId(game_id)},{ "$set": { 'tokens': cache_doc['tokens'],"updated_at":self.getRightnowUTC() } } )
+        text = self.tokenstoTxt(cache_doc['tokens'])    
+        return {"text":text} 
     
     def checkClickOnImg(self, loadImgRes,p):
         blackRects = list(filter(lambda r: r['status'] == self.STATUS_NOT_VISIBLE, loadImgRes["rects"]))
