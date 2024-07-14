@@ -121,7 +121,7 @@ class ITService:
                 tokens[i] = placeholder
                 changeCnt = changeCnt + 1
         text = self.tokenstoTxt(tokens)
-        doc = {'tokens':tokens,'ixDict':ixDict, "text_id":bson.ObjectId(docId), "text":text, "created_at":self.getRightnowUTC()}        
+        doc = {'tokens':tokens,'ixDict':ixDict, "text_id":bson.ObjectId(file_id), "text":text, "created_at":self.getRightnowUTC()}        
         docIn = self.db.text_guesser_game_cache.insert_one(doc)
         logging.info("started game with id " + str(docIn.inserted_id)) 
         retDoc = {'game_id':str(docIn.inserted_id),"text":text}
