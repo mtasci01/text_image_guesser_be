@@ -82,10 +82,30 @@ class ITService:
         text = text.replace(" “ ", "“")
         return text 
     
-    def startTxtGame(self,docId,pChange):
+    def start_char_game(self,file_id,pChange):
         pChange = float(pChange)
-        fileDoc = self.db.text_guesser.find_one({'_id': bson.ObjectId(docId)})
-        tokens = nltk.tokenize.word_tokenize(fileDoc["content"])
+        file_doc = self.db.text_guesser.find_one({'_id': bson.ObjectId(file_id)})
+        ret = []
+        if (file_doc) is None:
+            raise TypeError("file_id not found " + file_id)
+        for c in file_doc["content"]:
+            ret_obj = {"char":c, "to_replace":False}
+            if not(c in self.punctuation or c == ' '):
+                randnum = np.random.rand()
+                if randnum <= pChange:
+                    ret_obj['to_replace']=True
+            ret.append(ret_obj)
+        return ret            
+                
+
+
+    
+    def startTxtGame(self,file_id,pChange):
+        pChange = float(pChange)
+        file_doc = self.db.text_guesser.find_one({'_id': bson.ObjectId(file_id)})
+        if (file_doc) is None:
+            raise TypeError("file_id not found " + file_id) 
+        tokens = nltk.tokenize.word_tokenize(file_doc["content"])
         changeCnt = 0
         ixDict = {}
         for i in range(len(tokens)):
@@ -107,6 +127,8 @@ class ITService:
             
     def guessTextWord(self,game_id,word):
         cache_doc = self.db.text_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
+        if (cache_doc) is None:
+            raise TypeError("game_id not found " + game_id) 
         for ix in cache_doc['ixDict']:
             ixObj = cache_doc['ixDict'][ix]
             if word.lower() == ixObj["originalText"].lower():
@@ -133,6 +155,8 @@ class ITService:
     def textRevealNumber(self,game_id,ix):
         ix = str(ix)
         cache_doc = self.db.text_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
+        if (cache_doc) is None:
+            raise TypeError("game_id not found " + game_id) 
         if not(ix in cache_doc['ixDict']):
             text = self.tokenstoTxt(cache_doc['tokens'])    
             return {"text":text}

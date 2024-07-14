@@ -24,21 +24,25 @@ def getSavedFiles():
     return service.getSavedTextFiles()
 
 @app.get("/text/start_game")
-def startGame(docId,prob):
+def start_txt_game(docId,prob):
     return service.startTxtGame(docId,prob)
 
 @app.get("/text/guess_word")
-def startGame(game_id,word):
+def guess_text_word(game_id,word):
     return service.guessTextWord(game_id,word)
 
 @app.get("/text/reveal_number")
-def startGame(game_id,number):
+def text_reveal_number(game_id,number):
     return service.textRevealNumber(game_id,number)
 
 @app.delete("/text/delete_file")
-def startGame(file_id):
+def delete_file(file_id):
     return service.delete_file(file_id)
 
 @app.post("/text/upload_file")
 def upload_file(file: UploadFile):
     return service.upload_file(file)
+
+@app.get("/text/start_char_game")
+def start_char_game(file_id,prob):
+    return service.start_char_game(file_id,prob)
