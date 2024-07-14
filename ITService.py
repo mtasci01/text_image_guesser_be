@@ -88,13 +88,15 @@ class ITService:
         ret = []
         if (file_doc) is None:
             raise TypeError("file_id not found " + file_id)
+        ix = 0
         for c in file_doc["content"]:
-            ret_obj = {"char":c, "to_replace":False}
+            ret_obj = {"char":c, "to_replace":False, "ix":ix}
             if not(c in self.punctuation or c == ' '):
                 randnum = np.random.rand()
                 if randnum <= pChange:
                     ret_obj['to_replace']=True
             ret.append(ret_obj)
+            ix = ix + 1
         return ret            
                 
 
