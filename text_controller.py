@@ -17,7 +17,7 @@ app.add_middleware(
 
 service = ITService()
 
-#uvicorn text_controller:app --reload
+
 
 @app.get("/text/get_saved_files")
 def getSavedFiles():
