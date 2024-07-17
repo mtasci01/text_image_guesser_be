@@ -152,7 +152,20 @@ class ITService:
         text_doc = {"created_at":self.getRightnowUTC(),"filename":file.filename,"content":content, "scores":[]}
 
         self.db.text_guesser.insert_one(text_doc)
-        logging.info("created text_doc with id " + str(text_doc["_id"]))       
+        logging.info("created text_doc with id " + str(text_doc["_id"]))     
+
+    def upload_labeled_file(self,file):
+        with file.file as f:
+            doc = {"created_at":self.getRightnowUTC(),"filename":file.filename,"img": bson.Binary(pickle.dumps(f.read()))}
+            self.db.img_guesser.insert_one(doc)
+            logging.info("created img_doc with id " + str(doc["_id"]))   
+
+    def get_saved_img(self, doc_id):
+        doc = self.db.img_guesser.find_one({'_id': bson.ObjectId(doc_id)})
+        if (doc) is None:
+            raise TypeError("doc not found " + doc_id)
+        return {"img":pickle.loads(doc["img"]), "ext":os.path.splitext(doc["filename"])[1]}      
+              
         
     def textRevealNumber(self,game_id,ix):
         ix = str(ix)

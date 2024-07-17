@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from ITService import ITService
@@ -46,3 +46,12 @@ def upload_file(file: UploadFile):
 @app.get("/text/start_char_game")
 def start_char_game(file_id,prob):
     return service.start_char_game(file_id,prob)
+
+@app.post("/img/upload_labeled_file")
+def upload_file(file: UploadFile):
+    return service.upload_labeled_file(file)
+
+@app.get("/img/get")
+def get_labeled_img(doc_id):
+    ret =   service.get_saved_img(doc_id)
+    return Response(content=ret['img'], media_type="image/" +ret['ext'].replace('.',''))
