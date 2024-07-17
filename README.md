@@ -10,4 +10,7 @@ the image will be resized to a square to fit the number of segments
 docker build -t text_image_guesser_be .
 
 docker run -d -p 8000:8000 --name text_image_guesser_be -v path_to_file/config.ini:/code/config.ini text_image_guesser_be
-docker run -d -p 27017:27017 --name mongo mongo:7.0.12
+
+docker volume create --name=mongodata
+
+docker run -d -p 27017:27017 -v mongodata:/data/db --name mongo mongo:7.0.12 
