@@ -257,9 +257,16 @@ class ITService:
                 "img_id":bson.ObjectId(doc_id), "created_at":self.getRightnowUTC()}        
         self.db.img_guesser_game_cache.insert_one(doc)
 
-        ret_ret = {"img":img_byte_arr,"doc_id":doc_id,"game_id":str(doc['_id'])}
+        ret_ret = {"doc_id":doc_id,"game_id":str(doc['_id'])}
 
         return ret_ret
+    
+    def download_cached_img(self, game_id):
+        cache_doc = self.db.img_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
+        if (cache_doc) is None:
+            raise TypeError("game_id not found " + game_id)
+        img_bytes = pickle.loads(cache_doc["img"]) 
+        return {"img_bytes":img_bytes} 
                   
 
     def getNumOfImages(self):

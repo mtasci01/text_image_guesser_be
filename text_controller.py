@@ -63,5 +63,9 @@ def get_saved_img_num():
 @app.get("/img/start_game")
 def start_img_game():
     ret=  service.start_img_game()
-    headers = {"doc_id":ret['doc_id'],"game_id":ret['game_id']}
-    return Response(content=ret['img'], media_type="image/png",headers=headers)
+    return ret
+
+@app.get("/img/download_cached")
+def download_cached_img(game_id):
+    ret =  service.download_cached_img(game_id)
+    return Response(content=ret['img_bytes'], media_type="image/png")
