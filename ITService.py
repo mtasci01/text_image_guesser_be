@@ -154,9 +154,9 @@ class ITService:
         self.db.text_guesser.insert_one(text_doc)
         logging.info("created text_doc with id " + str(text_doc["_id"]))     
 
-    def upload_labeled_file(self,file):
+    def upload_labeled_file(self,file,label):
         with file.file as f:
-            doc = {"created_at":self.getRightnowUTC(),"filename":file.filename,"img": bson.Binary(pickle.dumps(f.read()))}
+            doc = {"created_at":self.getRightnowUTC(),"filename":file.filename,"label":label,"img": bson.Binary(pickle.dumps(f.read()))}
             self.db.img_guesser.insert_one(doc)
             logging.info("created img_doc with id " + str(doc["_id"]))   
 
@@ -238,6 +238,16 @@ class ITService:
             for x in range(rect[0],rect[2]):
                 for y in range(rect[1],rect[3]):
                     img.putpixel((x,y),(0,0,0))
+
+    def start_img_game(self):
+        doc_id = self.randomDoc()
+        ret = self.loadImg(doc_id)
+        imgByteArr = io.BytesIO()
+        ret['img'].save(imgByteArr, format='PNG')
+        imgByteArr = imgByteArr.getvalue()
+        ret_ret = {"img":imgByteArr,"doc_id":doc_id}
+        #save in cache
+        return ret_ret
                   
 
     def getNumOfImages(self):
@@ -247,7 +257,7 @@ class ITService:
             contents = os.listdir(str(currPath) + "/" + self.STORAGE_FOLDER)
             numImgs = len(contents)
         else:
-            numImgs = self.db.img_guesser.count_documents({})
+            numImgs = self.db.img_guesser.count_documents({})   
         return numImgs
     
     def randomDoc(self):
@@ -266,7 +276,7 @@ class ITService:
         return len(rects),len(blackRects)
 
     def loadImg(self, docId):
-        data  ={}
+        data = {}
         if (not(self.config['imgguessing_usemongo'])):
             currPath = pathlib.Path().resolve()        
             f = open(str(currPath) + "/" + self.STORAGE_FOLDER + "/" + docId + "/data.json")
@@ -299,7 +309,7 @@ class ITService:
         rectChosen['status'] = self.STATUS_VISIBLE
         self.blackenPixels(rects,img)
           
-        res = {"img":img, "imgOriginal":imgO, "rects":rects, "imgSize":minSide, "label":data['label'].lower()}
+        res = {"img":img, "imgOriginal":imgO, "rects":rects, "imgSize":minSide, "label":data['label'].lower(),"doc_id":docId}
         return res   
 
     def getRects(self,squareSide):

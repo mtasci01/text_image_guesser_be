@@ -48,10 +48,20 @@ def start_char_game(file_id,prob):
     return service.start_char_game(file_id,prob)
 
 @app.post("/img/upload_labeled_file")
-def upload_file(file: UploadFile):
-    return service.upload_labeled_file(file)
+def upload_labeled_file(file: UploadFile, label):
+    return service.upload_labeled_file(file,label)
 
 @app.get("/img/get")
 def get_labeled_img(doc_id):
     ret =   service.get_saved_img(doc_id)
     return Response(content=ret['img'], media_type="image/" +ret['ext'].replace('.',''))
+
+@app.get("/img/get_saved_img_num")
+def get_saved_img_num():
+    return service.getNumOfImages()
+
+@app.get("/img/start_game")
+def start_img_game():
+    ret=  service.start_img_game()
+    headers = {"doc_id":ret['doc_id']}
+    return Response(content=ret['img'], media_type="image/png",headers=headers)
