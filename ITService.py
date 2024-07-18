@@ -242,11 +242,23 @@ class ITService:
     def start_img_game(self):
         doc_id = self.randomDoc()
         ret = self.loadImg(doc_id)
-        imgByteArr = io.BytesIO()
-        ret['img'].save(imgByteArr, format='PNG')
-        imgByteArr = imgByteArr.getvalue()
-        ret_ret = {"img":imgByteArr,"doc_id":doc_id}
-        #save in cache
+
+        img_byte_arr = io.BytesIO()
+        ret['img'].save(img_byte_arr, format='PNG')
+        img_byte_arr = img_byte_arr.getvalue()
+
+        original_img_byte_arr = io.BytesIO()
+        ret['imgOriginal'].save(original_img_byte_arr, format='PNG')
+        original_img_byte_arr = original_img_byte_arr.getvalue()
+        
+
+        doc = {'img':bson.Binary(pickle.dumps(img_byte_arr)),'img_original':bson.Binary(pickle.dumps(original_img_byte_arr)),
+               "rects":ret['rects'],"img_size":ret['imgSize'],"label":ret['label'],
+                "img_id":bson.ObjectId(doc_id), "created_at":self.getRightnowUTC()}        
+        self.db.img_guesser_game_cache.insert_one(doc)
+
+        ret_ret = {"img":img_byte_arr,"doc_id":doc_id,"game_id":str(doc['_id'])}
+
         return ret_ret
                   
 
