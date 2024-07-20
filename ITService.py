@@ -22,6 +22,7 @@ import pymongo
 class ITService:
 
     MIN_SIZE = 300
+    IMG_MAX_SIZE = 5000
     NUM_SIDE_SEGMENTS = 8
     STORAGE_FOLDER = "storage"
     IMG_NAME_IN_FOLDER = "image.png"
@@ -239,10 +240,19 @@ class ITService:
                 for y in range(rect[1],rect[3]):
                     img.putpixel((x,y),(0,0,0))
 
+    def init_black_img(self,rects,img_o, new_img):
+        not_black = list(filter(lambda r: r['status'] == self.STATUS_VISIBLE, rects))
+        for r in not_black:
+            rect = r['rect']
+            for x in range(rect[0],rect[2]):
+                for y in range(rect[1],rect[3]):
+                    new_img.putpixel((x,y),img_o.getpixel((x, y)))                
+
     def start_img_game(self):
         doc_id = self.randomDoc()
-        ret = self.loadImg(doc_id)
-
+        ret = self.loadImg(doc_id) #optimize here
+        if (ret['img'] == None):
+            return
         img_byte_arr = io.BytesIO()
         ret['img'].save(img_byte_arr, format='PNG')
         img_byte_arr = img_byte_arr.getvalue()
@@ -316,19 +326,23 @@ class ITService:
         if minSide % 2 == 1:
             minSide = minSide - 1
         if (minSide < self.MIN_SIZE):
-            logging.info(docId + " not enough size")
+            logging.error(docId + " not enough size")
+            return
+        if (minSide > self.IMG_MAX_SIZE):
+            logging.error(docId + " too much size")
             return
         squareSide = minSide/self.NUM_SIDE_SEGMENTS
         squareSide = math.floor(squareSide)
         minSide = squareSide*self.NUM_SIDE_SEGMENTS
         img = img.resize((minSide,minSide))
-        imgO = img.copy() 
+        img_o = img.copy()
+        new_img = Image.new('RGB', (minSide,minSide)) 
         rects = self.getRects(squareSide)
         rectChosen = np.random.choice(rects)
         rectChosen['status'] = self.STATUS_VISIBLE
-        self.blackenPixels(rects,img)
+        self.init_black_img(rects,img_o,new_img)
           
-        res = {"img":img, "imgOriginal":imgO, "rects":rects, "imgSize":minSide, "label":data['label'].lower(),"doc_id":docId}
+        res = {"img":new_img, "imgOriginal":img_o, "rects":rects, "imgSize":minSide, "label":data['label'].lower(),"doc_id":docId}
         return res   
 
     def getRects(self,squareSide):
