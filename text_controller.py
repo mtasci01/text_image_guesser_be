@@ -69,3 +69,8 @@ def start_img_game():
 def download_cached_img(game_id):
     ret =  service.download_cached_img(game_id)
     return Response(content=ret['img_bytes'], media_type="image/png")
+
+@app.get("/img/click_img_sent")
+def click_img_sent(p_x,p_y,client_img_size,game_id):
+    ret=  service.click_img_sent([float(p_x),float(p_y)],float(client_img_size),game_id)
+    return ret

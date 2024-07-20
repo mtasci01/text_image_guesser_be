@@ -180,8 +180,32 @@ class ITService:
         cache_doc['tokens'][ixObj["i"]] = ixObj["originalText"]
         self.db.text_guesser_game_cache.update_one({"_id":bson.ObjectId(game_id)},{ "$set": { 'tokens': cache_doc['tokens'],"updated_at":self.getRightnowUTC() } } )
         text = self.tokenstoTxt(cache_doc['tokens'])    
-        return {"text":text} 
+        return {"text":text}
+
+    def click_img_sent(self,p,client_img_size,game_id):
+       
+        cache_doc = self.db.img_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
+        if (cache_doc) is None:
+            raise TypeError("game_id not found " + game_id) 
+        p_x = math.floor((p[0]*cache_doc['img_size'])/client_img_size)
+        p_y = math.floor((p[1]*cache_doc['img_size'])/client_img_size)
+        
+        img_bytes = pickle.loads(cache_doc["img"])
+        cache_doc["img"] = Image.open(io.BytesIO(img_bytes))
+
+        img_bytes_origin = pickle.loads(cache_doc["img_original"])
+        cache_doc["img_original"] = Image.open(io.BytesIO(img_bytes_origin))
+
+        self.checkClickOnImg(cache_doc,[p_x,p_y])
+
+        img_byte_arr = io.BytesIO()
+        cache_doc['img'].save(img_byte_arr, format='PNG')
+        img_byte_arr = img_byte_arr.getvalue()
+        
+        self.db.img_guesser_game_cache.update_one({"_id":bson.ObjectId(game_id)},{ "$set": { 'img': bson.Binary(pickle.dumps(img_byte_arr)),'rects': cache_doc['rects'],"updated_at":self.getRightnowUTC() } } ) 
     
+    
+
     def checkClickOnImg(self, loadImgRes,p):
         blackRects = list(filter(lambda r: r['status'] == self.STATUS_NOT_VISIBLE, loadImgRes["rects"]))
         for r in blackRects:
@@ -190,7 +214,7 @@ class ITService:
                 rect = r['rect']
                 for x in range(rect[0],rect[2]):
                     for y in range(rect[1],rect[3]):
-                        loadImgRes["img"].putpixel((x, y), loadImgRes["imgOriginal"].getpixel((x, y)))
+                        loadImgRes["img"].putpixel((x, y), loadImgRes["img_original"].getpixel((x, y)))
                 break
     
 
@@ -258,12 +282,12 @@ class ITService:
         img_byte_arr = img_byte_arr.getvalue()
 
         original_img_byte_arr = io.BytesIO()
-        ret['imgOriginal'].save(original_img_byte_arr, format='PNG')
+        ret['img_original'].save(original_img_byte_arr, format='PNG')
         original_img_byte_arr = original_img_byte_arr.getvalue()
         
 
         doc = {'img':bson.Binary(pickle.dumps(img_byte_arr)),'img_original':bson.Binary(pickle.dumps(original_img_byte_arr)),
-               "rects":ret['rects'],"img_size":ret['imgSize'],"label":ret['label'],
+               "rects":ret['rects'],"img_size":ret['img_size'],"label":ret['label'],
                 "img_id":bson.ObjectId(doc_id), "created_at":self.getRightnowUTC()}        
         self.db.img_guesser_game_cache.insert_one(doc)
 
@@ -342,7 +366,7 @@ class ITService:
         rectChosen['status'] = self.STATUS_VISIBLE
         self.init_black_img(rects,img_o,new_img)
           
-        res = {"img":new_img, "imgOriginal":img_o, "rects":rects, "imgSize":minSide, "label":data['label'].lower(),"doc_id":docId}
+        res = {"img":new_img, "img_original":img_o, "rects":rects, "img_size":minSide, "label":data['label'].lower(),"doc_id":docId}
         return res   
 
     def getRects(self,squareSide):

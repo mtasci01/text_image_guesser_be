@@ -110,8 +110,8 @@ class MouseTrackingApp(QMainWindow):
         if not(self.frameImg.isVisible()):
             return
         
-        sX = math.floor((event.pos().x()*self.loadImgRes['imgSize'])/self.IMG_DISPLAY_SIZE)
-        sY = math.floor((event.pos().y()*self.loadImgRes['imgSize'])/self.IMG_DISPLAY_SIZE)
+        sX = math.floor((event.pos().x()*self.loadImgRes['img_size'])/self.IMG_DISPLAY_SIZE)
+        sY = math.floor((event.pos().y()*self.loadImgRes['img_size'])/self.IMG_DISPLAY_SIZE)
         self.service.checkClickOnImg(self.loadImgRes,[sX,sY])
         self.renderImg()
         
