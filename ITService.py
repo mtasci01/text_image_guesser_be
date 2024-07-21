@@ -160,7 +160,9 @@ class ITService:
 
     def upload_labeled_file(self,file,label):
         with file.file as f:
-            doc = {"created_at":self.getRightnowUTC(),"filename":file.filename,"label":label,"img": bson.Binary(pickle.dumps(f.read()))}
+            fs_id = self.fs.put(f)
+            logging.info("created img_fs_id with id " + str(fs_id))   
+            doc = {"created_at":self.getRightnowUTC(),"filename":file.filename,"label":label,"img_fs_id": fs_id}
             self.db.img_guesser.insert_one(doc)
             logging.info("created img_doc with id " + str(doc["_id"]))   
 
@@ -168,7 +170,9 @@ class ITService:
         doc = self.db.img_guesser.find_one({'_id': bson.ObjectId(doc_id)})
         if (doc) is None:
             raise TypeError("doc not found " + doc_id)
-        return {"img":pickle.loads(doc["img"]), "ext":os.path.splitext(doc["filename"])[1]}      
+        #xyz
+        fs_out = self.fs.get(doc["img_fs_id"])
+        return {"img":fs_out.read(), "ext":os.path.splitext(doc["filename"])[1]}      
               
         
     def textRevealNumber(self,game_id,ix):
@@ -192,21 +196,25 @@ class ITService:
             raise TypeError("game_id not found " + game_id) 
         p_x = math.floor((p[0]*cache_doc['img_size'])/client_img_size)
         p_y = math.floor((p[1]*cache_doc['img_size'])/client_img_size)
-        
-        img_bytes = pickle.loads(cache_doc["img"])
+        #xyz
+        fs_out = self.fs.get(cache_doc["fs_img_cache_id"])
+        img_bytes = fs_out.read()
         cache_doc["img"] = Image.open(io.BytesIO(img_bytes))
 
-        img_bytes_origin = pickle.loads(cache_doc["img_original"])
+        fs_out = self.fs.get(cache_doc["fs_img_original_id"])
+        img_bytes_origin = fs_out.read()
         cache_doc["img_original"] = Image.open(io.BytesIO(img_bytes_origin))
 
         self.checkClickOnImg(cache_doc,[p_x,p_y])
 
         img_byte_arr = io.BytesIO()
-        cache_doc['img'].save(img_byte_arr, format='PNG')
+        cache_doc['img'].save(img_byte_arr, format='BMP')
         img_byte_arr = img_byte_arr.getvalue()
+        new_fs_id = self.fs.put(img_byte_arr)
+        self.fs.delete(cache_doc["fs_img_cache_id"])
+        self.db.img_guesser_game_cache.update_one({"_id":bson.ObjectId(game_id)},{ "$set": {'fs_img_cache_id':new_fs_id,'rects': cache_doc['rects'],"updated_at":self.getRightnowUTC() } } ) 
         
-        self.db.img_guesser_game_cache.update_one({"_id":bson.ObjectId(game_id)},{ "$set": { 'img': bson.Binary(pickle.dumps(img_byte_arr)),'rects': cache_doc['rects'],"updated_at":self.getRightnowUTC() } } ) 
-    
+        
     
 
     def checkClickOnImg(self, loadImgRes,p):
@@ -277,21 +285,19 @@ class ITService:
 
     def start_img_game(self):
         doc_id = self.randomDoc()
-        ret = self.loadImg(doc_id) #optimize here
+        ret = self.loadImg(doc_id)
         if (ret['img'] == None):
             return
         img_byte_arr = io.BytesIO()
-        ret['img'].save(img_byte_arr, format='PNG')
+        ret['img'].save(img_byte_arr, format='BMP')
         img_byte_arr = img_byte_arr.getvalue()
+        #xyz
+        fs_id = self.fs.put(img_byte_arr)
 
-        original_img_byte_arr = io.BytesIO()
-        ret['img_original'].save(original_img_byte_arr, format='PNG')
-        original_img_byte_arr = original_img_byte_arr.getvalue()
-        
-
-        doc = {'img':bson.Binary(pickle.dumps(img_byte_arr)),'img_original':bson.Binary(pickle.dumps(original_img_byte_arr)),
+        doc = {'fs_img_cache_id':fs_id,
+               "fs_img_original_id":ret['img_original_fs_id'],
                "rects":ret['rects'],"img_size":ret['img_size'],"label":ret['label'],
-                "img_id":bson.ObjectId(doc_id), "created_at":self.getRightnowUTC()}        
+                "img_doc_id":bson.ObjectId(doc_id), "created_at":self.getRightnowUTC()}        
         self.db.img_guesser_game_cache.insert_one(doc)
 
         ret_ret = {"doc_id":doc_id,"label":ret['label'],"game_id":str(doc['_id'])}
@@ -307,14 +313,17 @@ class ITService:
         cache_doc = self.db.img_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
         if (cache_doc) is None:
             raise TypeError("game_id not found " + game_id)
-        img_bytes = pickle.loads(cache_doc["img"]) 
+        #xyz
+        fs_out = self.fs.get(cache_doc["fs_img_cache_id"])
+        img_bytes = fs_out.read()
         return {"img_bytes":img_bytes} 
     
     def download_cached_original(self, game_id):
         cache_doc = self.db.img_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
         if (cache_doc) is None:
             raise TypeError("game_id not found " + game_id)
-        img_origin_bytes = pickle.loads(cache_doc["img_original"]) 
+        fs_out = self.fs.get(cache_doc["fs_img_original_id"])
+        img_origin_bytes = fs_out.read()
         return {"img_origin_bytes":img_origin_bytes} 
                   
 
@@ -355,7 +364,9 @@ class ITService:
             record = self.db.img_guesser.find_one({'_id': bson.ObjectId(docId)})
             if (record) is None:
                 raise TypeError("doc not found " + docId)
-            imgBytes = pickle.loads(record["img"])
+            #xyz
+            fs_out = self.fs.get(record["img_fs_id"])
+            imgBytes = fs_out.read()
             img = Image.open(io.BytesIO(imgBytes))
             data['label']= record['label']
 
@@ -379,7 +390,7 @@ class ITService:
         rectChosen['status'] = self.STATUS_VISIBLE
         self.init_black_img(rects,img_o,new_img)
           
-        res = {"img":new_img, "img_original":img_o, "rects":rects, "img_size":minSide, "label":data['label'].lower(),"doc_id":docId}
+        res = {"img":new_img, "img_original_fs_id":record["img_fs_id"], "rects":rects, "img_size":minSide, "label":data['label'].lower(),"doc_id":docId}
         return res   
 
     def getRects(self,squareSide):
@@ -390,20 +401,16 @@ class ITService:
                 rectObj = {"rect":rect,"status":self.STATUS_NOT_VISIBLE}
                 rects.append(rectObj)
         return rects
-
-    #-------------------------GRIDFS TESTS    
-    def fs_upload_test(self,file):
-        with file.file as f:
-            a = self.fs.put(f)
-            print(a)
-            fs_out = self.fs.get(a)
-            img_bytes = fs_out.read()
-
-            pil_img = Image.open(io.BytesIO(img_bytes))
-
-            img_bytes_new = io.BytesIO()
-            pil_img.save(img_bytes_new, format='PNG')
-            img_bytes_new = img_bytes_new.getvalue()
-
-            return img_bytes_new
+    
+    def img_clear_fs_cache(self):
+        uploaded = self.db.img_guesser.find({})
+        uploaded = list(map(lambda d: str(d["img_fs_id"]), uploaded))   
+        uploadedSet = set(uploaded)
+        print(uploadedSet)
+        fs_files = self.fs.find()
         
+        for fs_doc in fs_files:
+
+            print(fs_doc._id)
+            if not(fs_doc._id in uploadedSet):
+                self.fs.delete(fs_doc._id)

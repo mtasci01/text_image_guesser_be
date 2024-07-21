@@ -84,7 +84,6 @@ def download_cached_original(game_id):
     ret =  service.download_cached_original(game_id)
     return Response(content=ret['img_origin_bytes'], media_type="image/png")
 
-@app.post("/fs_upload_test")
-def fs_upload_test(file: UploadFile):
-    ret = service.fs_upload_test(file)
-    return Response(content=ret, media_type="image/png")
+@app.get("/img/clear_fs_cache")
+def img_clear_fs_cache(): 
+    return service.img_clear_fs_cache()
