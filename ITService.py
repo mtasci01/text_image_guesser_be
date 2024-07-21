@@ -23,7 +23,7 @@ import pymongo
 class ITService:
 
     MIN_SIZE = 300
-    IMG_MAX_SIZE = 5000
+    IMG_MAX_SIZE = 1200
     NUM_SIDE_SEGMENTS = 8
     STORAGE_FOLDER = "storage"
     IMG_NAME_IN_FOLDER = "image.png"
@@ -170,7 +170,6 @@ class ITService:
         doc = self.db.img_guesser.find_one({'_id': bson.ObjectId(doc_id)})
         if (doc) is None:
             raise TypeError("doc not found " + doc_id)
-        #xyz
         fs_out = self.fs.get(doc["img_fs_id"])
         return {"img":fs_out.read(), "ext":os.path.splitext(doc["filename"])[1]}      
               
@@ -190,13 +189,11 @@ class ITService:
         return {"text":text}
 
     def click_img_sent(self,p,client_img_size,game_id):
-       
         cache_doc = self.db.img_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
         if (cache_doc) is None:
             raise TypeError("game_id not found " + game_id) 
         p_x = math.floor((p[0]*cache_doc['img_size'])/client_img_size)
         p_y = math.floor((p[1]*cache_doc['img_size'])/client_img_size)
-        #xyz
         fs_out = self.fs.get(cache_doc["fs_img_cache_id"])
         img_bytes = fs_out.read()
         cache_doc["img"] = Image.open(io.BytesIO(img_bytes))
@@ -213,7 +210,6 @@ class ITService:
         new_fs_id = self.fs.put(img_byte_arr)
         self.fs.delete(cache_doc["fs_img_cache_id"])
         self.db.img_guesser_game_cache.update_one({"_id":bson.ObjectId(game_id)},{ "$set": {'fs_img_cache_id':new_fs_id,'rects': cache_doc['rects'],"updated_at":self.getRightnowUTC() } } ) 
-        
         
     
 
@@ -291,7 +287,6 @@ class ITService:
         img_byte_arr = io.BytesIO()
         ret['img'].save(img_byte_arr, format='BMP')
         img_byte_arr = img_byte_arr.getvalue()
-        #xyz
         fs_id = self.fs.put(img_byte_arr)
 
         doc = {'fs_img_cache_id':fs_id,
@@ -313,7 +308,6 @@ class ITService:
         cache_doc = self.db.img_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
         if (cache_doc) is None:
             raise TypeError("game_id not found " + game_id)
-        #xyz
         fs_out = self.fs.get(cache_doc["fs_img_cache_id"])
         img_bytes = fs_out.read()
         return {"img_bytes":img_bytes} 
@@ -364,7 +358,6 @@ class ITService:
             record = self.db.img_guesser.find_one({'_id': bson.ObjectId(docId)})
             if (record) is None:
                 raise TypeError("doc not found " + docId)
-            #xyz
             fs_out = self.fs.get(record["img_fs_id"])
             imgBytes = fs_out.read()
             img = Image.open(io.BytesIO(imgBytes))
