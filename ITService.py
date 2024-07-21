@@ -411,6 +411,5 @@ class ITService:
         
         for fs_doc in fs_files:
 
-            print(fs_doc._id)
-            if not(fs_doc._id in uploadedSet):
+            if not(str(fs_doc._id) in uploadedSet):
                 self.fs.delete(fs_doc._id)
