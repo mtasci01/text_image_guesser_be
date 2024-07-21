@@ -2,8 +2,7 @@
 
 1. A very simple program to practice memorizing your texts.
 
-2. A very simple image guessing program. The file to upload is a csv with 2 fields, the path to the image and the label you want guessed
-the image will be resized to a square to fit the number of segments        
+2. A very simple image guessing program. You will upload your image with a label. The image will be turned in a square and has a min and max length
 
 py 3.11.5
 

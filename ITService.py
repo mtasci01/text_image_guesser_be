@@ -10,6 +10,7 @@ import uuid
 from PIL import Image
 import logging
 from pathlib import Path
+import gridfs
 import nltk
 
 import json
@@ -29,6 +30,7 @@ class ITService:
     STATUS_VISIBLE = "visible"
     STATUS_NOT_VISIBLE = "not_visible"
     logging.basicConfig(level=logging.INFO)
+
     
 
     def __init__(self):
@@ -42,6 +44,7 @@ class ITService:
             self.db = self.mongoclient[self.config['mongo_db']]
         self.stopwords = set(w.rstrip() for w in open('resources/stopwords.txt'))
         self.punctuation = {",",".",";",":","(",")","→","’","'","”","“","\""}
+        self.fs = gridfs.GridFS(self.db)
 
     def read_config(self):
 
@@ -362,11 +365,9 @@ class ITService:
         if minSide % 2 == 1:
             minSide = minSide - 1
         if (minSide < self.MIN_SIZE):
-            logging.error(docId + " not enough size")
-            return
+            raise TypeError(docId + " not enough size")
         if (minSide > self.IMG_MAX_SIZE):
-            logging.error(docId + " too much size")
-            return
+            raise TypeError(docId + " too much size")
         squareSide = minSide/self.NUM_SIDE_SEGMENTS
         squareSide = math.floor(squareSide)
         minSide = squareSide*self.NUM_SIDE_SEGMENTS
@@ -388,4 +389,21 @@ class ITService:
                 rect = [x*squareSide,y*squareSide, (x+1)*squareSide,(y+1)*squareSide]
                 rectObj = {"rect":rect,"status":self.STATUS_NOT_VISIBLE}
                 rects.append(rectObj)
-        return rects    
+        return rects
+
+    #-------------------------GRIDFS TESTS    
+    def fs_upload_test(self,file):
+        with file.file as f:
+            a = self.fs.put(f)
+            print(a)
+            fs_out = self.fs.get(a)
+            img_bytes = fs_out.read()
+
+            pil_img = Image.open(io.BytesIO(img_bytes))
+
+            img_bytes_new = io.BytesIO()
+            pil_img.save(img_bytes_new, format='PNG')
+            img_bytes_new = img_bytes_new.getvalue()
+
+            return img_bytes_new
+        

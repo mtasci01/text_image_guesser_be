@@ -83,3 +83,8 @@ def get_all_labels():
 def download_cached_original(game_id):
     ret =  service.download_cached_original(game_id)
     return Response(content=ret['img_origin_bytes'], media_type="image/png")
+
+@app.post("/fs_upload_test")
+def fs_upload_test(file: UploadFile):
+    ret = service.fs_upload_test(file)
+    return Response(content=ret, media_type="image/png")
