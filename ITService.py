@@ -408,7 +408,7 @@ class ITService:
             if not(str(fs_doc._id) in uploadedSet):
                 self.fs.delete(fs_doc._id)
 
-    def docx_scrambler(self,docx_file,p_change):
+    def docx_char_scrambler(self,docx_file,p_change):
         with docx_file.file as f:
             document = Document(f)
             p_change = float(p_change)
@@ -431,4 +431,33 @@ class ITService:
             file_stream = io.BytesIO()
             document.save(file_stream)
             
-            return file_stream.getvalue()                 
+            return file_stream.getvalue()
+
+    def docx_word_scrambler(self,docx_file,p_change):
+        with docx_file.file as f:
+            document = Document(f)
+            p_change = float(p_change)
+
+            if p_change <= 0 or p_change > 1:
+                raise TypeError("invalid p_change " + str(p_change))
+
+            for p in document.paragraphs:
+
+                strArr = []
+                tokens = nltk.tokenize.word_tokenize(p.text)
+                
+                for i in range(len(tokens)):
+                    
+                    if (tokens[i] in self.stopwords or tokens[i] in self.punctuation):
+                        continue
+
+                    randnum = np.random.rand()
+                    if randnum <= p_change:
+                        tokens[i] = "?"
+                p.text = self.tokenstoTxt(tokens)          
+            file_stream = io.BytesIO()
+            document.save(file_stream)
+            
+            return file_stream.getvalue()      
+        
+                        

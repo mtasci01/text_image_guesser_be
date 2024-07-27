@@ -88,6 +88,10 @@ def download_cached_original(game_id):
 def img_clear_fs_cache(): 
     return service.img_clear_fs_cache()
 
-@app.post("/text/docx_scrambler")
+@app.post("/text/docx_char_scrambler")
 def docx_scrambler(file: UploadFile, p_change):
-    return Response(content=service.docx_scrambler(file,p_change), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    return Response(content=service.docx_char_scrambler(file,p_change), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+@app.post("/text/docx_word_scrambler")
+def docx_scrambler(file: UploadFile, p_change):
+    return Response(content=service.docx_word_scrambler(file,p_change), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
