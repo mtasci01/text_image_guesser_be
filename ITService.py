@@ -10,6 +10,7 @@ import uuid
 from PIL import Image
 import logging
 from pathlib import Path
+from docx import Document
 import gridfs
 import nltk
 
@@ -406,3 +407,26 @@ class ITService:
 
             if not(str(fs_doc._id) in uploadedSet):
                 self.fs.delete(fs_doc._id)
+
+    def docx_scrambler(docx_file,self):
+        document = Document('NotesAstronomy_ATA.docx')
+        print(document.paragraphs)
+
+        p_change = 0.1
+
+        for p in document.paragraphs:
+            print("-------------")
+            print(p.text)
+
+            strArr = []
+            
+            for i in range(len(p.text)):
+                c = p.text[i]
+                randnum = np.random.rand()
+                if not(c in self.punctuation or c == ' ') and  randnum <= p_change:
+                    strArr.append("?")
+                else:
+                    strArr.append(p.text[i]) 
+            p.text = strArr          
+
+        document.save('NotesAstronomy_ATA_new.docx')                            

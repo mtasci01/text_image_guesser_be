@@ -87,3 +87,7 @@ def download_cached_original(game_id):
 @app.get("/img/clear_fs_cache")
 def img_clear_fs_cache(): 
     return service.img_clear_fs_cache()
+
+@app.post("/text/docx_scrambler")
+def docx_scrambler(file: UploadFile, p_change):
+    return service.docx_scrambler(file,p_change)
