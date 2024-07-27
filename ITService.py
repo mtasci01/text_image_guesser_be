@@ -408,25 +408,27 @@ class ITService:
             if not(str(fs_doc._id) in uploadedSet):
                 self.fs.delete(fs_doc._id)
 
-    def docx_scrambler(docx_file,self):
-        document = Document('NotesAstronomy_ATA.docx')
-        print(document.paragraphs)
+    def docx_scrambler(self,docx_file,p_change):
+        with docx_file.file as f:
+            document = Document(f)
+            p_change = float(p_change)
 
-        p_change = 0.1
+            if p_change <= 0 or p_change > 1:
+                raise TypeError("invalid p_change " + str(p_change))
 
-        for p in document.paragraphs:
-            print("-------------")
-            print(p.text)
+            for p in document.paragraphs:
 
-            strArr = []
+                strArr = []
+                
+                for i in range(len(p.text)):
+                    c = p.text[i]
+                    randnum = np.random.rand()
+                    if not(c in self.punctuation or c == ' ') and  randnum <= p_change:
+                        strArr.append("?")
+                    else:
+                        strArr.append(p.text[i]) 
+                p.text = strArr          
+            file_stream = io.BytesIO()
+            document.save(file_stream)
             
-            for i in range(len(p.text)):
-                c = p.text[i]
-                randnum = np.random.rand()
-                if not(c in self.punctuation or c == ' ') and  randnum <= p_change:
-                    strArr.append("?")
-                else:
-                    strArr.append(p.text[i]) 
-            p.text = strArr          
-
-        document.save('NotesAstronomy_ATA_new.docx')                            
+            return file_stream.getvalue()                 

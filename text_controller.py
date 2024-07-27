@@ -90,4 +90,4 @@ def img_clear_fs_cache():
 
 @app.post("/text/docx_scrambler")
 def docx_scrambler(file: UploadFile, p_change):
-    return service.docx_scrambler(file,p_change)
+    return Response(content=service.docx_scrambler(file,p_change), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
