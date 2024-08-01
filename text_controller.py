@@ -100,6 +100,14 @@ def docx_scrambler(file: UploadFile, p_change):
 def get_all_locations(): 
     return service.get_all_locations()
 
+@app.get("/locations/get_all_labels")
+def get_all_location_labels(): 
+    return service.get_all_location_labels()
+
+@app.get("/locations/get_random_label")
+def get_random_location_label(): 
+    return service.get_random_location_label()
+
 @app.get("/locations/get_directions")
 def get_all_locations(start,target): 
     return service.get_directions(start,target)

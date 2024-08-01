@@ -483,9 +483,20 @@ class ITService:
         docs = self.db.location_game.find({})
         return list(map(lambda d: {"id":str(d['_id']),"label":d['label']}, docs))
     
+    def get_all_location_labels(self):
+        docs = self.db.location_game.find({})
+        return list(map(lambda d: d['label'], docs))
+
+    def get_random_location_label(self):
+        docs = list(self.db.location_game.find({}))
+        rand_choice = np.random.choice(docs)
+        return rand_choice['label']   
+    
     def get_directions(self,start,target):
         start_doc = self.db.location_game.find_one({"label":start.lower()})   
         target_doc = self.db.location_game.find_one({"label":target.lower()}) 
+        if start_doc == None or target_doc == None:
+            raise TypeError("source or target not found")
         y_axis = np.array([0, 1]) 
         vec_1 = np.array([target_doc['lon'],target_doc['lat']])
         vec_2 = np.array([start_doc['lon'],start_doc['lat']])
