@@ -508,7 +508,7 @@ class ITService:
         distance = geodesic([start_doc['lat'],start_doc['lon']], 
                [target_doc['lat'],target_doc['lon']]).kilometers
         dir = "UNK"
-        if angle_deg > 337.5 and angle_deg <= 22.5:
+        if angle_deg > 337.5 or angle_deg <= 22.5:
             dir = "N"
         elif angle_deg > 22.5 and angle_deg <= 67.5:
             dir = "NE"
