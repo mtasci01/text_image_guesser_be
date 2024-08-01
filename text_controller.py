@@ -95,3 +95,11 @@ def docx_scrambler(file: UploadFile, p_change):
 @app.post("/text/docx_word_scrambler")
 def docx_scrambler(file: UploadFile, p_change):
     return Response(content=service.docx_word_scrambler(file,p_change), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+@app.get("/locations/get_all")
+def get_all_locations(): 
+    return service.get_all_locations()
+
+@app.get("/locations/get_directions")
+def get_all_locations(start,target): 
+    return service.get_directions(start,target)

@@ -13,6 +13,7 @@ from pathlib import Path
 from docx import Document
 import gridfs
 import nltk
+from geopy.distance import geodesic
 
 import json
 
@@ -45,7 +46,7 @@ class ITService:
             self.db = self.mongoclient[self.config['mongo_db']]
         self.stopwords = set(w.rstrip() for w in open('resources/stopwords.txt'))
         self.punctuation = {",",".",";",":","(",")","→","’","'","”","“","\""}
-        self.fs = gridfs.GridFS(self.db)
+        self.fs_img = gridfs.GridFS(self.db, "img_guesser")
 
     def read_config(self):
 
@@ -68,6 +69,14 @@ class ITService:
             
     def getRightnowUTC(self):
         return round(datetime.datetime.now(datetime.timezone.utc).timestamp()*1000)
+    
+    def unit_vector(self,vector):
+        return vector / np.linalg.norm(vector)
+
+    def angle_between(self,v1, v2):
+        v1_u = self.unit_vector(v1)
+        v2_u = self.unit_vector(v2)
+        return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
     
     def getSavedTextFiles(self):
         tList = list(self.db.text_guesser.find({}))
@@ -161,7 +170,7 @@ class ITService:
 
     def upload_labeled_file(self,file,label):
         with file.file as f:
-            fs_id = self.fs.put(f)
+            fs_id = self.fs_img.put(f)
             logging.info("created img_fs_id with id " + str(fs_id))   
             doc = {"created_at":self.getRightnowUTC(),"filename":file.filename,"label":label,"img_fs_id": fs_id}
             self.db.img_guesser.insert_one(doc)
@@ -171,7 +180,7 @@ class ITService:
         doc = self.db.img_guesser.find_one({'_id': bson.ObjectId(doc_id)})
         if (doc) is None:
             raise TypeError("doc not found " + doc_id)
-        fs_out = self.fs.get(doc["img_fs_id"])
+        fs_out = self.fs_img.get(doc["img_fs_id"])
         return {"img":fs_out.read(), "ext":os.path.splitext(doc["filename"])[1]}      
               
         
@@ -195,11 +204,11 @@ class ITService:
             raise TypeError("game_id not found " + game_id) 
         p_x = math.floor((p[0]*cache_doc['img_size'])/client_img_size)
         p_y = math.floor((p[1]*cache_doc['img_size'])/client_img_size)
-        fs_out = self.fs.get(cache_doc["fs_img_cache_id"])
+        fs_out = self.fs_img.get(cache_doc["fs_img_cache_id"])
         img_bytes = fs_out.read()
         cache_doc["img"] = Image.open(io.BytesIO(img_bytes))
 
-        fs_out = self.fs.get(cache_doc["fs_img_original_id"])
+        fs_out = self.fs_img.get(cache_doc["fs_img_original_id"])
         img_bytes_origin = fs_out.read()
         cache_doc["img_original"] = Image.open(io.BytesIO(img_bytes_origin))
 
@@ -208,8 +217,8 @@ class ITService:
         img_byte_arr = io.BytesIO()
         cache_doc['img'].save(img_byte_arr, format='BMP')
         img_byte_arr = img_byte_arr.getvalue()
-        new_fs_id = self.fs.put(img_byte_arr)
-        self.fs.delete(cache_doc["fs_img_cache_id"])
+        new_fs_id = self.fs_img.put(img_byte_arr)
+        self.fs_img.delete(cache_doc["fs_img_cache_id"])
         self.db.img_guesser_game_cache.update_one({"_id":bson.ObjectId(game_id)},{ "$set": {'fs_img_cache_id':new_fs_id,'rects': cache_doc['rects'],"updated_at":self.getRightnowUTC() } } ) 
         
     
@@ -288,7 +297,7 @@ class ITService:
         img_byte_arr = io.BytesIO()
         ret['img'].save(img_byte_arr, format='BMP')
         img_byte_arr = img_byte_arr.getvalue()
-        fs_id = self.fs.put(img_byte_arr)
+        fs_id = self.fs_img.put(img_byte_arr)
 
         doc = {'fs_img_cache_id':fs_id,
                "fs_img_original_id":ret['img_original_fs_id'],
@@ -309,7 +318,7 @@ class ITService:
         cache_doc = self.db.img_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
         if (cache_doc) is None:
             raise TypeError("game_id not found " + game_id)
-        fs_out = self.fs.get(cache_doc["fs_img_cache_id"])
+        fs_out = self.fs_img.get(cache_doc["fs_img_cache_id"])
         img_bytes = fs_out.read()
         return {"img_bytes":img_bytes} 
     
@@ -317,7 +326,7 @@ class ITService:
         cache_doc = self.db.img_guesser_game_cache.find_one({"_id":bson.ObjectId(game_id)})
         if (cache_doc) is None:
             raise TypeError("game_id not found " + game_id)
-        fs_out = self.fs.get(cache_doc["fs_img_original_id"])
+        fs_out = self.fs_img.get(cache_doc["fs_img_original_id"])
         img_origin_bytes = fs_out.read()
         return {"img_origin_bytes":img_origin_bytes} 
                   
@@ -359,7 +368,7 @@ class ITService:
             record = self.db.img_guesser.find_one({'_id': bson.ObjectId(docId)})
             if (record) is None:
                 raise TypeError("doc not found " + docId)
-            fs_out = self.fs.get(record["img_fs_id"])
+            fs_out = self.fs_img.get(record["img_fs_id"])
             imgBytes = fs_out.read()
             img = Image.open(io.BytesIO(imgBytes))
             data['label']= record['label']
@@ -401,12 +410,12 @@ class ITService:
         uploaded = list(map(lambda d: str(d["img_fs_id"]), uploaded))   
         uploadedSet = set(uploaded)
         print(uploadedSet)
-        fs_files = self.fs.find()
+        fs_files = self.fs_img.find()
         
         for fs_doc in fs_files:
 
             if not(str(fs_doc._id) in uploadedSet):
-                self.fs.delete(fs_doc._id)
+                self.fs_img.delete(fs_doc._id)
 
     def docx_char_scrambler(self,docx_file,p_change):
         with docx_file.file as f:
@@ -458,6 +467,52 @@ class ITService:
             file_stream = io.BytesIO()
             document.save(file_stream)
             
-            return file_stream.getvalue()      
+            return file_stream.getvalue()
+
+    def locations_importer(self):
+        docs = []
+        with open('resources/locations_rome.csv',encoding='utf-8') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            for row in csv_reader:
+                doc = {"label":str(row[0]).lower(),"lat":float(row[1].strip()),"lon":float(row[2].strip())}
+                docs.append(doc)
+            self.db.location_game.insert_many(docs)     
+            print("inserted " + str(len(docs)) + " documents")
+
+    def get_all_locations(self):
+        docs = self.db.location_game.find({})
+        return list(map(lambda d: {"id":str(d['_id']),"label":d['label']}, docs))
+    
+    def get_directions(self,start,target):
+        start_doc = self.db.location_game.find_one({"label":start.lower()})   
+        target_doc = self.db.location_game.find_one({"label":target.lower()}) 
+        y_axis = np.array([0, 1]) 
+        vec_1 = np.array([target_doc['lon'],target_doc['lat']])
+        vec_2 = np.array([start_doc['lon'],start_doc['lat']])
+        diff_vec = vec_1 - vec_2
+        angle = self.angle_between(diff_vec,y_axis)
+        angle_deg = 360*angle/(2*np.pi)
+        if diff_vec[0]<0:
+            angle_deg = 360-angle_deg
+        distance = geodesic([start_doc['lat'],start_doc['lon']], 
+               [target_doc['lat'],target_doc['lon']]).kilometers
+        dir = "UNK"
+        if angle_deg > 337.5 and angle_deg <= 22.5:
+            dir = "N"
+        elif angle_deg > 22.5 and angle_deg <= 67.5:
+            dir = "NE"
+        elif angle_deg > 67.5 and angle_deg <= 112.5:
+            dir = "E"
+        elif angle_deg > 112.5 and angle_deg <= 157.5:
+            dir = "SE"
+        elif angle_deg > 157.5 and angle_deg <= 202.5:
+            dir = "S"
+        elif angle_deg > 202.5 and angle_deg <= 247.5:
+            dir = "SW"
+        elif angle_deg > 247.5 and angle_deg <= 292.5:
+            dir = "W" 
+        elif angle_deg > 292.5 and angle_deg <= 337.5:
+            dir = "NW"                                
+        return {"angle_deg":angle_deg,"distance_km":distance,"direction":dir}                             
         
                         
