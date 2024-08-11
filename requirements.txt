@@ -8,3 +8,4 @@ PyQt5_sip==12.13.0
 geographiclib==2.0
 geopy==2.4.1
 python-docx==1.1.2
+nltk==3.8.1
