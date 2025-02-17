@@ -21,3 +21,5 @@ docker volume create --name=mongodata
 docker run -d -p 27017:27017 -v mongodata:/data/db --name mongo mongo:7.0.12 
 
 docker inspect -> ip address for address of db
+
+pyinstaller text_scrambler_console.py --onefile
