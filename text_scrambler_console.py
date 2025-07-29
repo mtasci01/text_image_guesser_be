@@ -32,9 +32,11 @@ def main():
     if not(os.path.isfile(INPUT_FILE)):
         print(INPUT_FILE + " not found")
     else:
-        print("Start processing "+ INPUT_FILE)    
+        print("Start processing "+ INPUT_FILE) 
+        print("Choose chance of skipping char in percent (like 0.2)")
+        p_change = input()    
         document = Document(INPUT_FILE)
-        document = docx_char_scrambler(document,0.2)
+        document = docx_char_scrambler(document,p_change)
         document.save("docx_char_scrambler_" + str(uuid.uuid4()) + ".docx")
     val = input("Finished!")
 
